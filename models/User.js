@@ -1,13 +1,15 @@
+const { v4: uuidv4 } = require('uuid');
 const mongoose = require('mongoose');
+
 const userSchema = new mongoose.Schema({
-  userId: { type: String, required: true, unique: true },
-  name: String,
-  regNo: String,
-  college: String,
-  year: String,
-  course: String,
-  email: String,
-  phone: String,
+  userId: { type: String, required: true, unique: true, default: uuidv4 },
+  name: { type: String, required: true, trim: true },
+  regNo: { type: String, required: true, unique: true, trim: true },
+  college: { type: String, required: true, trim: true },
+  year: { type: String, required: true, trim: true },
+  course: { type: String, required: true, trim: true },
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  phone: { type: String, required: true, unique: true, trim: true },
   createdAt: { type: Date, default: Date.now }
 });
 module.exports = mongoose.model('User', userSchema);
