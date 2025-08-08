@@ -3,11 +3,11 @@ const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
   userId: { type: String, required: true, unique: true, default: uuidv4 },
-  name: { type: String, required: true, trim: true },
+  firstname: { type: String, required: true, trim: true },
+  lastname: { type: String, required: true, trim: true },
   regNo: { type: String, required: true, unique: true, trim: true },
   college: { type: String, required: true, trim: true },
   year: { type: String, required: true, trim: true },
-  course: { type: String, required: true, trim: true },
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   phone: { type: String, required: true, unique: true, trim: true },
   createdAt: { type: Date, default: Date.now }
