@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 
-const Application = require('../models/Application');
+const Application = require('../models/applicationModel');
 
 exports.saveApplication = async (req, res) => {
   const { userId, department, answers } = req.body;
