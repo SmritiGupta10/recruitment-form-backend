@@ -3,16 +3,31 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const bodyParser = require('body-parser');
 const connectDB = require('./config/db');
-
+const app = express();
 const userRoutes = require('./routes/userRoutes');
 const applicationRoutes = require('./routes/applicationRoutes');
-
+const { readSheet, appendToSheet } = require('./sheets');
+const SHEET_ID = '1SKHDyhZ5xP_RRjmL7OIk71QNoOPQRoy8OeXD6ijhg1Y'; // from URL
+const RANGE = 'Sheet1!A1:H'; // Adjust as needed
+// View data
+app.get('/sheet', async (req, res) => {
+    const data = await readSheet(SHEET_ID, RANGE);
+    res.json(data);
+  });
+  
+  // Add data (e.g., from MongoDB or form)
+  app.post('/sheet', async (req, res) => {
+    const row = req.body.row; // Expecting an array
+    await appendToSheet(SHEET_ID, RANGE, row);
+    res.send({ success: true });
+  });
 dotenv.config();
-const app = express();
+
 app.use(express.json());
 connectDB();
 
-app.use(cors());
+
+app.use(cors({ origin: '*' }));
 app.use(bodyParser.json());
 app.get('/', (req, res) => res.send('Server running'));
 
