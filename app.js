@@ -27,7 +27,12 @@ app.use(express.json());
 connectDB();
 
 
-app.use(cors({ origin: '*' }));
+app.use(cors({
+    origin: 'http://localhost:3000', // Only allow this origin
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-requested-with'],
+    credentials: true // If you need to send cookies/auth headers
+  }));
 app.use(bodyParser.json());
 app.get('/', (req, res) => res.send('Server running'));
 
