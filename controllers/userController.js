@@ -3,27 +3,30 @@ const generateId = require('../utils/generateId');
 
 exports.registerUser = async (req, res) => {
   try {
-    const { email, phone } = req.body; // or whichever fields are unique for identifying a user
+    const { email, phone, regNo } = req.body;
 
-    // 1️⃣ Check if user already exists
-    const existingUser = await User.findOne({ email, phone });
+    // 1️⃣ Check if user already exists by any unique identifier
+    const existingUser = await User.findOne({
+      $or: [
+        { email },
+        { phone },
+        { regNo }
+      ]
+    });
 
     if (existingUser) {
-      // Return existing user (acts as "login" for autosave)
+      // Return existing user instead of creating a duplicate
       return res.status(200).json({
         message: 'User already exists, returning existing data',
         data: existingUser
       });
     }
 
-    // 2️⃣ Generate new userId
+    // 2️⃣ Create a new user if not found
     const userId = generateId();
+    const newUser = new User({ ...req.body, userId });
+    const savedUser = await newUser.save();
 
-    // 3️⃣ Create and save new user
-    const user = new User({ ...req.body, userId });
-    const savedUser = await user.save();
-
-    // 4️⃣ Return saved user
     res.status(201).json({
       message: 'User registered successfully',
       data: savedUser
