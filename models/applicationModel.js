@@ -10,7 +10,7 @@ const applicationSchema = new mongoose.Schema({
   department: {
     type: String,
     required: true,
-    enum: ["writing", "dev","ang", "bdpr", "photo", "video"], 
+    enum: ["writing", "dev","ang", "bdpr", "pav"], 
   },
   answers: {
     type: [answerSchema],

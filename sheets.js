@@ -7,12 +7,13 @@ const auth = new google.auth.GoogleAuth({
   scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
 
-// Connect to Sheets
+// Connect to Sheets API
 async function getSheetsClient() {
   const authClient = await auth.getClient();
   return google.sheets({ version: 'v4', auth: authClient });
 }
 
+// Ensure a sheet with a given name exists
 async function ensureSheetExists(spreadsheetId, sheetName) {
   const sheets = await getSheetsClient();
   const sheetData = await sheets.spreadsheets.get({ spreadsheetId });
@@ -27,20 +28,18 @@ async function ensureSheetExists(spreadsheetId, sheetName) {
       spreadsheetId,
       requestBody: {
         requests: [
-          {
-            addSheet: {
-              properties: { title: sheetName }
-            }
-          }
+          { addSheet: { properties: { title: sheetName } } }
         ]
       }
     });
   }
 }
 
+// Ensure headers exist in a sheet (first row)
 async function ensureHeaders(spreadsheetId, sheetName, headers) {
   await ensureSheetExists(spreadsheetId, sheetName);
   const sheets = await getSheetsClient();
+
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId,
     range: `${sheetName}!A1:Z1`,
@@ -52,13 +51,10 @@ async function ensureHeaders(spreadsheetId, sheetName, headers) {
       spreadsheetId,
       range: `${sheetName}!A1`,
       valueInputOption: 'RAW',
-      resource: {
-        values: [headers],
-      },
+      resource: { values: [headers] },
     });
   }
 }
-
 
 // Read rows from a sheet safely
 async function readSheet(spreadsheetId, range) {
@@ -75,17 +71,45 @@ async function readSheet(spreadsheetId, range) {
   }
 }
 
-// Write rows to a sheet
-async function appendToSheet(spreadsheetId, range, values) {
+// Overwrite entire sheet data (clear old data first)
+async function overwriteSheet(spreadsheetId, sheetName, values) {
+  await ensureSheetExists(spreadsheetId, sheetName);
+  const sheets = await getSheetsClient();
+
+  // Clear existing data
+  await sheets.spreadsheets.values.clear({
+    spreadsheetId,
+    range: sheetName,
+  });
+
+  // Write new data
+  if (values && values.length > 0) {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: `${sheetName}!A1`,
+      valueInputOption: 'RAW',
+      resource: { values },
+    });
+  }
+}
+
+// Append rows to a sheet without clearing
+async function appendToSheet(spreadsheetId, sheetName, values) {
+  await ensureSheetExists(spreadsheetId, sheetName);
   const sheets = await getSheetsClient();
   await sheets.spreadsheets.values.append({
     spreadsheetId,
-    range,
+    range: sheetName,
     valueInputOption: 'RAW',
-    resource: {
-      values: Array.isArray(values[0]) ? values : [values],
-    },
+    resource: { values: Array.isArray(values[0]) ? values : [values] },
   });
 }
 
-module.exports = { readSheet, appendToSheet, ensureHeaders };
+module.exports = {
+  getSheetsClient,
+  ensureSheetExists,
+  ensureHeaders,
+  readSheet,
+  overwriteSheet,
+  appendToSheet
+};
