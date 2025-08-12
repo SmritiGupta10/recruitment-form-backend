@@ -6,21 +6,21 @@ exports.registerUser = async (req, res) => {
     const { email, phone, regNo } = req.body;
 
     // 1️⃣ Check if user already exists by any unique identifier
-    const existingUser = await User.findOne({
-      $or: [
-        { email },
-        { phone },
-        { regNo }
-      ]
-    });
+    // const existingUser = await User.findOne({
+    //   $or: [
+    //     { email },
+    //     { phone },
+    //     { regNo }
+    //   ]
+    // });
 
-    if (existingUser) {
-      // Return existing user instead of creating a duplicate
-      return res.status(200).json({
-        message: 'User already exists, returning existing data',
-        data: existingUser
-      });
-    }
+    // if (existingUser) {
+    //   // Return existing user instead of creating a duplicate
+    //   return res.status(200).json({
+    //     message: 'User already exists, returning existing data',
+    //     data: existingUser
+    //   });
+    // }
 
     // 2️⃣ Create a new user if not found
     const userId = generateId();
