@@ -7,6 +7,9 @@ const answerSchema = new mongoose.Schema({
 
 const applicationSchema = new mongoose.Schema({
   userId: { type: String, required: true },
+  firstname: { type: String },
+  lastname: { type: String },
+  phone: { type: String },
   department: {
     type: String,
     required: true,
