@@ -6,11 +6,17 @@ const answerSchema = new mongoose.Schema({
 }, { _id: false });
 
 const applicationSchema = new mongoose.Schema({
-  userId: { type: String, required: true },
+  name: { type: String, required: true },
+  email: { type: String, required: true },
+  phone: { type: String, required: true },
+  registrationNumber: { type: String, required: true },
+  year: { type: String, required: true },
+  collegeName: { type: String, required: true },
+
   department: {
     type: String,
     required: true,
-    enum: ["writing", "dev","ang", "bdpr", "pav"], 
+    enum: ["writing", "dev","ang", "bdpr", "photo","video"], 
   },
   answers: {
     type: [answerSchema],
@@ -21,7 +27,8 @@ const applicationSchema = new mongoose.Schema({
 });
 
 // Ensure a user can apply only once to each department
-applicationSchema.index({ userId: 1, department: 1 }, { unique: true });
+applicationSchema.index({ registrationNumber: 1, department: 1 }, { unique: true });
+
 
 function arrayLimit(val) {
   return Array.isArray(val) && val.length > 0;
