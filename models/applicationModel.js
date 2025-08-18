@@ -16,7 +16,7 @@ const applicationSchema = new mongoose.Schema({
   department: {
     type: String,
     required: true,
-    enum: ["writing", "dev","ang", "bdpr", "pav"], 
+    enum: ["writing", "dev","ang", "bdpr", "photo","video"], 
   },
   answers: {
     type: [answerSchema],
