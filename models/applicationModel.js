@@ -27,7 +27,8 @@ const applicationSchema = new mongoose.Schema({
 });
 
 // Ensure a user can apply only once to each department
-applicationSchema.index({ userId: 1, department: 1 }, { unique: true });
+applicationSchema.index({ registrationNumber: 1, department: 1 }, { unique: true });
+
 
 function arrayLimit(val) {
   return Array.isArray(val) && val.length > 0;
