@@ -282,15 +282,15 @@ async function syncDepartmentsMongoToSheet() {
     
 // ===== CRON JOB =====
 function startSyncCron() {
-  cron.schedule("*/5 * * * *", async () => {
+  cron.schedule("*/40 * * * *", async () => {
     console.log("Starting sync job...");
     try {
-      await syncUsersMongoToSheet();
-      await syncUsersSheetToMongo();
-      await syncAppsMongoToSheet();
-      await syncAppsSheetToMongo();
-      await syncDepartmentsMongoToSheet();
-      await syncDepartmentsSheetToMongo();
+      // await syncUsersMongoToSheet();
+      // await syncUsersSheetToMongo();
+      // await syncAppsMongoToSheet();
+      // await syncAppsSheetToMongo();
+      // await syncDepartmentsMongoToSheet();
+      // await syncDepartmentsSheetToMongo();
       console.log("Sync job complete.");
     } catch (err) {
       console.error("Sync error:", err);

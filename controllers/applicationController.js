@@ -1,61 +1,60 @@
 const crypto = require('crypto');
 const Application = require('../models/applicationModel');
-const User = require('../models/userModel'); // Import User model
 
 exports.saveApplication = async (req, res) => {
-  const { userId, department, answers } = req.body;
+  const { name, email, phone, registrationNumber, year, collegeName, department, answers } = req.body;
 
   // 1️⃣ Validate request body
-  if (!userId || !department || !Array.isArray(answers) || answers.length === 0) {
+  if (!name || !email || !phone || !registrationNumber || !year || !collegeName || !department || !Array.isArray(answers) || answers.length === 0) {
     return res.status(400).json({ error: 'Missing or invalid fields' });
   }
 
   // 2️⃣ Ensure each answer follows { questionId, answerText }
-  const invalidAnswer = answers.find(
-    ans => !ans.questionId || !ans.answerText
-  );
+  const invalidAnswer = answers.find(ans => !ans.questionId || !ans.answerText);
   if (invalidAnswer) {
     return res.status(400).json({ error: 'Each answer must have questionId and answerText' });
   }
 
   try {
-    // 3️⃣ Get user details from User model
-    const user = await User.findOne({ userId });
-    if (!user) {
-      return res.status(404).json({ error: 'User not found for given userId' });
-    }
-
     const answersString = JSON.stringify(answers);
     const currentHash = crypto.createHash("md5").update(answersString).digest("hex");
 
-    // 4️⃣ Check if application exists
-    const existing = await Application.findOne({ userId, department });
+    // 3️⃣ Check if application exists (based on registrationNumber + department)
+    const existing = await Application.findOne({ registrationNumber, department });
 
     if (existing) {
       // Skip saving if nothing changed
       if (existing.lastHash === currentHash) {
         return res.status(200).json({ message: "No changes detected" });
       }
+
+      existing.name = name;
+      existing.email = email;
+      existing.phone = phone;
+      existing.registrationNumber = registrationNumber;
+      existing.year = year;
+      existing.collegeName = collegeName;
       existing.answers = answers;
-      existing.firstname = user.firstname; // update from user
-      existing.lastname = user.lastname;
-      existing.phone = user.phone;
       existing.lastUpdated = Date.now();
       existing.lastHash = currentHash;
+
       await existing.save();
       return res.json({ message: 'Application updated' });
     }
 
-    // 5️⃣ Create new application with user details
+    // 4️⃣ Create new application
     const application = new Application({
-      userId,
+      name,
+      email,
+      phone,
+      registrationNumber,
+      year,
+      collegeName,
       department,
       answers,
-      firstname: user.firstname,
-      lastname: user.lastname,
-      phone: user.phone,
       lastHash: currentHash
     });
+
     await application.save();
     res.status(201).json({ message: 'Application saved' });
 

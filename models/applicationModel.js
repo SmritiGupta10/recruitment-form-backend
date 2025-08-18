@@ -6,10 +6,13 @@ const answerSchema = new mongoose.Schema({
 }, { _id: false });
 
 const applicationSchema = new mongoose.Schema({
-  userId: { type: String, required: true },
-  firstname: { type: String },
-  lastname: { type: String },
-  phone: { type: String },
+  name: { type: String, required: true },
+  email: { type: String, required: true },
+  phone: { type: String, required: true },
+  registrationNumber: { type: String, required: true },
+  year: { type: String, required: true },
+  collegeName: { type: String, required: true },
+
   department: {
     type: String,
     required: true,
