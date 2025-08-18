@@ -11,11 +11,12 @@ connectDB();
 const app = express();
 
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: ['http://localhost:3000', 'https://www.manipalthetalk.net'], 
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-requested-with'],
   credentials: true
 }));
+
 app.use(bodyParser.json());
 
 app.get('/', (req, res) => res.send('Server running'));
@@ -24,7 +25,7 @@ app.use('/api/user', require('./routes/userRoutes'));
 app.use('/api', require('./routes/applicationRoutes'));
 
 // Start sync cron
-startSyncCron();
+// startSyncCron();
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
