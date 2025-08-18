@@ -25,7 +25,7 @@ app.use('/api/user', require('./routes/userRoutes'));
 app.use('/api', require('./routes/applicationRoutes'));
 
 // Start sync cron
-// startSyncCron();
+startSyncCron();
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
