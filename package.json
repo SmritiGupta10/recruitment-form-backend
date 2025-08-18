@@ -17,6 +17,7 @@
     "googleapis": "^155.0.1",
     "mongoose": "^8.17.0",
     "node-cron": "^4.2.1",
+    "nodemailer": "^7.0.5",
     "uuid": "^11.1.0"
   }
 }

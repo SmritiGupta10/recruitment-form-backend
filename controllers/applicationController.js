@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const Application = require('../models/applicationModel');
+const {sendMail} = require("../utils/sendMail.js")
 
 exports.saveApplication = async (req, res) => {
   const { name, email, phone, registrationNumber, year, collegeName, department, answers } = req.body;
@@ -56,6 +57,7 @@ exports.saveApplication = async (req, res) => {
     });
 
     await application.save();
+    await sendMail(email, name);
     res.status(201).json({ message: 'Application saved' });
 
   } catch (err) {
