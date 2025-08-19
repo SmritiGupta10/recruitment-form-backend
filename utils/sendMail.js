@@ -14,7 +14,7 @@ const transporter = nodemailer.createTransport({
 
 const sendMail = async (receiverEmail, receiverName) => {
   try {
-    const emailHtml = fs.readFileSync(
+    let emailHtml = fs.readFileSync(
       path.join(__dirname, "email-template.html"), 
       "utf-8"
     );
