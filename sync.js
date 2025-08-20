@@ -518,7 +518,7 @@ async function syncDepartmentsMongoToSheet() {
     
 // ===== CRON JOB =====
 function startSyncCron() {
-  cron.schedule("*/1 * * * *", async () => {
+  cron.schedule("*/5 * * * *", async () => {
     console.log("Starting sync job...");
     try {
       await syncUsersMongoToSheet();
