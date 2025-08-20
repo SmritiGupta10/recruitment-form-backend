@@ -494,7 +494,7 @@ function startSyncCron() {
     console.log("Starting sync job...");
     try {
       await syncUsersMongoToSheet();
-      await syncAppsMongoToSheet();
+      // await syncAppsMongoToSheet();
 
       // await syncUsersSheetToMongo();
       // await syncAppsMongoToSheet();
