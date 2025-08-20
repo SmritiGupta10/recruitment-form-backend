@@ -33,8 +33,10 @@ const USERS_HEADERS = [
   'College', 'Year',  'Last Modified'
 ];
 const APPLICATIONS_HEADERS = [
-  'Name', 'Email', 'Phone', 'Reg No','College',
-  'Year', 'Department', 'QuestionID', 'Answer', 'Last Updated'
+  'Name', 'Email', 'Phone', 'Reg No', 'College',
+  'Year', 'Department',
+  'Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Q6', 'Q7', 'Q8', 'Q9',
+  'Last Updated'
 ];
 
 // Ensure main sheets exist
@@ -245,16 +247,38 @@ function computeAppHash(app) {
   return crypto.createHash('md5').update(str).digest('hex');
 }
 
+// const APPLICATIONS_HEADERS = [
+//   'Name', 'Email', 'Phone', 'Reg No', 'College',
+//   'Year', 'Department',
+//   'Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Q6', 'Q7', 'Q8', 'Q9',
+//   'Last Updated'
+// ];
+
 async function syncAppsMongoToSheet() {
   const sheets = await getSheetsClient();
 
-  // Read existing applications sheet
-  const existingRows = await readSheet(SHEET_ID, APPLICATIONS_RANGE);
+  // Standard headers (same for all sheets)
+  const APPLICATIONS_HEADERS = [
+    'Name', 'Email', 'Phone', 'Reg No', 'College',
+    'Year', 'Department',
+    'Q1','Q2','Q3','Q4','Q5','Q6','Q7','Q8','Q9',
+    'Last Updated'
+  ];
 
-  // Determine which applications to fetch
+  // Read master sheet
+  let existingRows = await readSheet(SHEET_ID, APPLICATIONS_RANGE);
+
+  // If empty or headers missing, reset
+  if (!existingRows.length || existingRows[0][0] !== 'Name') {
+    await ensureHeaders(SHEET_ID, 'Applications', APPLICATIONS_HEADERS);
+    existingRows = [APPLICATIONS_HEADERS];
+  }
+
+  // Decide what to fetch from DB
   let updatedApps;
-  if (existingRows.length <= 1) { // only headers exist
-    updatedApps = await Application.find().lean(); // fetch all if sheet empty
+  if (existingRows.length <= 1) {
+    // Fresh sheet → fetch all
+    updatedApps = await Application.find().lean();
   } else {
     const lastSync = await getLastSyncTime("mongoToSheet_apps");
     updatedApps = await Application.find({ lastUpdated: { $gt: lastSync } }).lean();
@@ -262,10 +286,10 @@ async function syncAppsMongoToSheet() {
 
   if (!updatedApps.length) return;
 
-  // Map existing rows by unique key: registrationNumber + department + questionId
+  // Map existing rows by RegNo|Department
   const existingMap = {};
   existingRows.slice(1).forEach((row, idx) => {
-    const key = `${row[3]}|${row[6]}|${row[7]}`; // RegNo|Department|QuestionID
+    const key = `${row[3]}|${row[6]}`; // RegNo|Dept
     existingMap[key] = { rowIndex: idx + 2, values: row };
   });
 
@@ -273,50 +297,50 @@ async function syncAppsMongoToSheet() {
   const newRows = [];
 
   for (const app of updatedApps) {
-    const currentHash = computeAppHash(app);
-    const hashChanged = !app.lastHash || app.lastHash !== currentHash;
+    // Flatten answers → max Q1–Q9
+    const qAnswers = Array(9).fill('');
+    app.answers.forEach((ans, i) => {
+      if (i < 9) qAnswers[i] = ans.answerText || '';
+    });
 
-    if (!hashChanged) continue; // skip if nothing changed
+    const rowData = [
+      app.name || '',
+      app.email || '',
+      app.phone || '',
+      app.registrationNumber || '',
+      app.collegeName || '',
+      app.year || '',
+      app.department || '',
+      ...qAnswers,
+      new Date().toISOString()
+    ];
 
-    // Process each answer
-    for (const ans of app.answers) {
-      const rowData = [
-        app.name || '',
-        app.email || '',
-        app.phone || '',
-        app.registrationNumber || '',
-        app.collegeName || '',
-        app.year || '',
-        app.department || '',
-        ans.questionId || '',
-        ans.answerText || '',
-        new Date().toISOString()
-      ];
+    const key = `${app.registrationNumber}|${app.department}`;
 
-      const key = `${app.registrationNumber}|${app.department}|${ans.questionId}`;
-
-      if (existingMap[key]) {
-        const existingValues = existingMap[key].values;
-        const changed = rowData.some((val, idx) => val !== (existingValues[idx] || ''));
-        if (changed) {
-          requests.push({
-            updateCells: {
-              rows: [{ values: rowData.map(v => ({ userEnteredValue: { stringValue: v } })) }],
-              fields: '*',
-              start: {
-                sheetId: 0,
-                rowIndex: existingMap[key].rowIndex - 1,
-                columnIndex: 0
-              }
+    if (existingMap[key]) {
+      // Update if changed
+      const existingValues = existingMap[key].values;
+      const changed = rowData.some((val, idx) => val !== (existingValues[idx] || ''));
+      if (changed) {
+        requests.push({
+          updateCells: {
+            rows: [{ values: rowData.map(v => ({ userEnteredValue: { stringValue: v } })) }],
+            fields: '*',
+            start: {
+              sheetId: 0,
+              rowIndex: existingMap[key].rowIndex - 1,
+              columnIndex: 0
             }
-          });
-        }
-      } else {
-        newRows.push(rowData);
+          }
+        });
       }
+    } else {
+      // New row
+      newRows.push(rowData);
     }
 
     // Update lastHash in DB
+    const currentHash = computeAppHash(app);
     await Application.updateOne({ _id: app._id }, { $set: { lastHash: currentHash } });
   }
 
@@ -348,6 +372,9 @@ async function syncAppsMongoToSheet() {
   // Department-wise sheets
   const departments = [...new Set(updatedApps.map(a => a.department))];
   for (const dept of departments) {
+    await ensureHeaders(SHEET_ID, dept, APPLICATIONS_HEADERS);
+
+    // Collect rows for this department
     const deptRows = [
       ...newRows.filter(r => r[6] === dept),
       ...requests
@@ -356,13 +383,12 @@ async function syncAppsMongoToSheet() {
     ];
 
     if (deptRows.length > 0) {
-      await ensureHeaders(SHEET_ID, dept, APPLICATIONS_HEADERS);
       for (let i = 0; i < deptRows.length; i += BATCH_SIZE) {
         const batch = deptRows.slice(i, i + BATCH_SIZE);
         await retryRequest(() =>
           sheets.spreadsheets.values.append({
             spreadsheetId: SHEET_ID,
-            range: `${dept}!A1:J`,
+            range: `${dept}!A1:R`,
             valueInputOption: 'RAW',
             resource: { values: batch }
           })
@@ -373,8 +399,10 @@ async function syncAppsMongoToSheet() {
   }
 
   await updateLastSyncTime("mongoToSheet_apps", new Date());
-  console.log(`Synced ${updatedApps.length} applications (updated + added)`);
+  console.log(`✅ Synced ${updatedApps.length} applications (updated + added)`);
 }
+
+
 
 
 
@@ -494,7 +522,7 @@ function startSyncCron() {
     console.log("Starting sync job...");
     try {
       await syncUsersMongoToSheet();
-      // await syncAppsMongoToSheet();
+      await syncAppsMongoToSheet();
 
       // await syncUsersSheetToMongo();
       // await syncAppsMongoToSheet();
