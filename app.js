@@ -4,7 +4,7 @@ const dotenv = require('dotenv');
 const bodyParser = require('body-parser');
 const connectDB = require('./config/db');
 const { startSyncCron } = require('./sync');
-const adminPanelRoutes = require('./routes/adminPanel');
+const adminPanelRoutes = require('./routes/AdminPanel');
 
 dotenv.config();
 connectDB();

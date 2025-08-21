@@ -14,39 +14,20 @@ router.get("/users", async (req, res) => {
   }
 });
 
-// ✅ Fetch all applications (with linked user if exists)
+// ✅ Fetch all applications (optionally attach user if exists)
 router.get("/applications", async (req, res) => {
   try {
-    const apps = await Application.aggregate([
-      {
-        $lookup: {
-          from: "users",                // collection name for User
-          localField: "registrationNumber",
-          foreignField: "regNo",
-          as: "userDetails",
-        },
-      },
-      {
-        $unwind: {
-          path: "$userDetails",
-          preserveNullAndEmptyArrays: true,
-        },
-      },
-      { $sort: { lastUpdated: -1 } },
-    ]);
+    // Fetch all applications
+    const apps = await Application.find().sort({ lastUpdated: -1 });
 
-    res.json(apps);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+    // Optionally attach user details if registrationNumber matches a user
+    const users = await User.find(); // fetch all users once
+    const appsWithUser = apps.map(app => {
+      const user = users.find(u => u.regNo === app.registrationNumber) || null;
+      return { ...app.toObject(), userDetails: user };
+    });
 
-// ✅ Fetch applications by department
-router.get("/applications/department/:dept", async (req, res) => {
-  try {
-    const dept = req.params.dept;
-    const apps = await Application.find({ department: dept }).sort({ lastUpdated: -1 });
-    res.json(apps);
+    res.json(appsWithUser);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
