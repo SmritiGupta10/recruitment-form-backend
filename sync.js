@@ -91,75 +91,42 @@ async function syncUsersMongoToSheet() {
   const lastSync = await getLastSyncTime("mongoToSheet_users");
   const allRegNos = Object.keys(existingMap);
 
-  // Fetch users (updated or missing)
+  // Fetch users updated since last sync or missing
   const updatedUsers = await User.find({ lastModified: { $gt: lastSync } }).lean();
   const missingUsers = await User.find({ regNo: { $nin: allRegNos } }).lean();
-  let usersToSync = [...updatedUsers, ...missingUsers];
+  const usersToSync = [...updatedUsers, ...missingUsers];
 
   if (!usersToSync.length) return;
 
-  // --- Step 1: Deduplicate by regNo, email, phone ---
-  const seen = new Map(); // key = phone|regNo|email, value = user
-  usersToSync.forEach(u => {
-    const keys = [
-      (u.phone || "").trim().toLowerCase(),
-      (u.regNo || "").trim().toLowerCase(),
-      (u.email || "").trim().toLowerCase()
-    ].filter(Boolean);
-
-    for (const k of keys) {
-      if (!seen.has(k) || new Date(u.lastModified) > new Date(seen.get(k).lastModified)) {
-        seen.set(k, u);
-      }
-    }
-  });
-
-  // Unique users only
-  usersToSync = Array.from(new Set(seen.values()));
-
-  // --- Step 2: Remove duplicates already in sheet ---
-  const sheetUniqueMap = new Map();
-  const duplicatesToDelete = [];
-
-  existingRows.slice(1).forEach((row, idx) => {
-    const phone = (row[2] || "").trim().toLowerCase();
-    const regNo = (row[3] || "").trim().toLowerCase();
-    const email = (row[4] || "").trim().toLowerCase();
-    const keys = [phone, regNo, email].filter(Boolean).join("|");
-
-    if (sheetUniqueMap.has(keys)) {
-      // duplicate row → mark for deletion
-      duplicatesToDelete.push(idx + 2); // sheet row index
-    } else {
-      sheetUniqueMap.set(keys, idx + 2);
-    }
-  });
-
-  // --- Step 3: Prepare requests ---
   const requests = [];
   const newRows = [];
 
   for (const u of usersToSync) {
     const rowData = [
-      u.firstname || "",
-      u.lastname || "",
-      u.phone || "",
-      u.regNo || "",
-      u.email || "",
-      u.college || "",
-      u.year || "",
+      u.firstname || '',
+      u.lastname || '',
+      u.phone || '',
+      u.regNo || '',
+      u.email || '',
+      u.college || '',
+      u.year || '',
       u.lastModified ? u.lastModified.toISOString() : new Date().toISOString()
     ];
 
     if (existingMap[u.regNo]) {
       const existingValues = existingMap[u.regNo].values;
-      const changed = rowData.some((val, idx) => val !== (existingValues[idx] || ""));
+      // Compare existing row with new row, only update if there are changes
+      const changed = rowData.some((val, idx) => val !== (existingValues[idx] || ''));
       if (changed) {
         requests.push({
           updateCells: {
             rows: [{ values: rowData.map(v => ({ userEnteredValue: { stringValue: v } })) }],
-            fields: "*",
-            start: { sheetId: 0, rowIndex: existingMap[u.regNo].rowIndex - 1, columnIndex: 0 }
+            fields: '*',
+            start: {
+              sheetId: 0,
+              rowIndex: existingMap[u.regNo].rowIndex - 1,
+              columnIndex: 0
+            }
           }
         });
       }
@@ -170,20 +137,7 @@ async function syncUsersMongoToSheet() {
 
   const BATCH_SIZE = 50;
 
-  // --- Step 4: Delete duplicate rows from sheet ---
-  for (let i = 0; i < duplicatesToDelete.length; i += BATCH_SIZE) {
-    const batch = duplicatesToDelete.slice(i, i + BATCH_SIZE).map(rowIndex => ({
-      deleteDimension: {
-        range: { sheetId: 0, dimension: "ROWS", startIndex: rowIndex - 1, endIndex: rowIndex }
-      }
-    }));
-    await retryRequest(() =>
-      sheets.spreadsheets.batchUpdate({ spreadsheetId: SHEET_ID, resource: { requests: batch } })
-    );
-    await delay(500);
-  }
-
-  // --- Step 5: Batch update existing rows ---
+  // Batch update existing rows
   for (let i = 0; i < requests.length; i += BATCH_SIZE) {
     const batch = requests.slice(i, i + BATCH_SIZE);
     await retryRequest(() =>
@@ -192,14 +146,14 @@ async function syncUsersMongoToSheet() {
     await delay(500);
   }
 
-  // --- Step 6: Batch append new rows ---
+  // Batch append new rows
   for (let i = 0; i < newRows.length; i += BATCH_SIZE) {
     const batch = newRows.slice(i, i + BATCH_SIZE);
     await retryRequest(() =>
       sheets.spreadsheets.values.append({
         spreadsheetId: SHEET_ID,
         range: USERS_RANGE,
-        valueInputOption: "RAW",
+        valueInputOption: 'RAW',
         resource: { values: batch }
       })
     );
@@ -207,9 +161,8 @@ async function syncUsersMongoToSheet() {
   }
 
   await updateLastSyncTime("mongoToSheet_users", new Date());
-  console.log(`Synced ${usersToSync.length} unique users to Google Sheet. Removed ${duplicatesToDelete.length} duplicates.`);
+  console.log(`Synced ${usersToSync.length} users to Google Sheet (updated + added)`);
 }
-
 
 
 async function syncUsersSheetToMongo() {
@@ -569,7 +522,7 @@ function startSyncCron() {
     console.log("Starting sync job...");
     try {
       await syncUsersMongoToSheet();
-      // await syncAppsMongoToSheet();
+      await syncAppsMongoToSheet();
 
       // await syncUsersSheetToMongo();
       // await syncAppsMongoToSheet();
