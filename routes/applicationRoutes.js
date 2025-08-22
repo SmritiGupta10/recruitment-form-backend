@@ -14,7 +14,7 @@ router.post("/send-thankyou-mail", async (req, res) => {
       await sendMail(
         email,
         name,
-        "email-template2.html", 
+        "email-template.html", 
         "We’ve received your application ✅"
       );
   
