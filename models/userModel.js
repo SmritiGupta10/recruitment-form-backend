@@ -11,7 +11,9 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   phone: { type: String, required: true, unique: true, trim: true },
   createdAt: { type: Date, default: Date.now },
-  lastModified: { type: Date, default: Date.now }
+  lastModified: { type: Date, default: Date.now },
+  emailStatus: { type: String, enum: ['pending', 'success', 'error', null], default: null },
+  lastEmailSentAt: { type: Date, default: null }
   
 });
 module.exports = mongoose.model('User', userSchema);

@@ -45,16 +45,26 @@ router.post("/send-unfilled-emails", async (req, res) => {
 
   for (const user of users) {
     try {
-      // Use your "unfilled reminder" template
       await sendMail(
         user.email,
         user.firstname || "Applicant",
-        "email-template2.html", // 👈 unfilled template
+        "email-template2.html", 
         "Reminder: Please complete your application"
+      );
+
+      // ✅ Update email status in DB
+      await User.updateOne(
+        { _id: user._id },
+        { $set: { emailStatus: "success", lastEmailSentAt: new Date() } }
       );
 
       results.push({ id: user._id, status: "success" });
     } catch (err) {
+      await User.updateOne(
+        { _id: user._id },
+        { $set: { emailStatus: "error", lastEmailSentAt: new Date() } }
+      );
+
       results.push({ id: user._id, status: "error", error: err.message });
     }
   }
