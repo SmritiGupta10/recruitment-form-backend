@@ -57,13 +57,7 @@ exports.saveApplication = async (req, res) => {
     });
 
     await application.save();
-    try {
-      await sendMail(email, name);
-      console.log("sent mail")
-    } catch (mailErr) {
-      console.error("Email failed:", mailErr);
-    }
-
+ 
     res.status(201).json({ message: 'Application saved' });
 
   } catch (err) {

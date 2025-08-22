@@ -17,11 +17,11 @@ const transporter = nodemailer.createTransport({
 });
 
 // Send mail function
-const sendMail = async (receiverEmail, receiverName) => {
+const sendMail = async (receiverEmail, receiverName,templateFile,subject) => {
   try {
     // Load HTML template
     let emailHtml = fs.readFileSync(
-      path.join(__dirname, "email-template.html"),
+      path.join(__dirname, templateFile),
       "utf-8"
     );
 
@@ -29,9 +29,9 @@ const sendMail = async (receiverEmail, receiverName) => {
     emailHtml = emailHtml.replace("{{receiverName}}", receiverName);
 
     await transporter.sendMail({
-      from: `"MTTN Team" <${process.env.EMAIL_USER}>`,
+      from: `"MTTN" <${process.env.EMAIL_USER}>`,
       to: receiverEmail,
-      subject: "We’ve received your application ✅",
+      subject: subject,
       html: emailHtml,
     });
 

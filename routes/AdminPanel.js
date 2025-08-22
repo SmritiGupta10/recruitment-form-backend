@@ -1,6 +1,7 @@
 const express = require("express");
 const User = require("../models/userModel");
 const Application = require("../models/applicationModel");
+const { sendMail } = require("../utils/sendMail");
 
 const router = express.Router();
 
@@ -32,5 +33,34 @@ router.get("/applications", async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
+// POST /send-unfilled-emails
+router.post("/send-unfilled-emails", async (req, res) => {
+  const { users } = req.body;
+
+  if (!users || !users.length) {
+    return res.status(400).json({ error: "No users provided" });
+  }
+
+  const results = [];
+
+  for (const user of users) {
+    try {
+      // Use your "unfilled reminder" template
+      await sendMail(
+        user.email,
+        user.firstname || "Applicant",
+        "email-template2.html", // 👈 unfilled template
+        "Reminder: Please complete your application"
+      );
+
+      results.push({ id: user._id, status: "success" });
+    } catch (err) {
+      results.push({ id: user._id, status: "error", error: err.message });
+    }
+  }
+
+  res.json({ success: true, results });
+});
+
 
 module.exports = router;
