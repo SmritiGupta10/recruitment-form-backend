@@ -13,6 +13,7 @@ const userSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   lastModified: { type: Date, default: Date.now },
   emailStatus: { type: String, enum: ['pending', 'success', 'error', null], default: null },
+  sheetStatus: { type: String, enum: ["success", "error", "pending"], default: null },
   lastEmailSentAt: { type: Date, default: null }
   
 });

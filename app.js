@@ -5,6 +5,7 @@ const bodyParser = require('body-parser');
 const connectDB = require('./config/db');
 const { startSyncCron } = require('./sync');
 const adminPanelRoutes = require('./routes/AdminPanel');
+const finalsheetRouter = require('./routes/finalsheet');
 
 dotenv.config();
 connectDB();
@@ -25,6 +26,7 @@ app.get('/', (req, res) => res.send('Server running'));
 app.use('/api/user', require('./routes/userRoutes'));
 app.use('/api', require('./routes/applicationRoutes'));
 app.use('/applicants', adminPanelRoutes);
+app.use("/applicants", finalsheetRouter);
 
 
 // Start sync cron

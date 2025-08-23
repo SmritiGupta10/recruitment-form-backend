@@ -36,7 +36,7 @@ router.get("/applications", async (req, res) => {
 // POST /send-unfilled-emails
 router.post("/send-unfilled-emails", async (req, res) => {
   const { users } = req.body;
- console.log("Received users:", users);
+//  console.log("Received users:", users);
   if (!users || !users.length) {
     return res.status(400).json({ error: "No users provided" });
   }
@@ -73,67 +73,7 @@ router.post("/send-unfilled-emails", async (req, res) => {
 
   res.json({ success: true, results });
 });
-router.post("/export-users-excel", async (req, res) => {
-  const { users } = req.body;
 
-  if (!users || !users.length) {
-    return res.status(400).json({ error: "No users provided" });
-  }
-
-  try {
-    // ✅ Create workbook
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Users");
-
-    // ✅ Define columns
-    worksheet.columns = [
-      { header: "First Name", key: "firstname", width: 20 },
-      { header: "Last Name", key: "lastname", width: 20 },
-      { header: "Reg No", key: "regNo", width: 15 },
-      { header: "College", key: "college", width: 25 },
-      { header: "Year", key: "year", width: 10 },
-      { header: "Email", key: "email", width: 30 },
-      { header: "Phone", key: "phone", width: 15 },
-      { header: "Created At", key: "createdAt", width: 20 },
-      { header: "Email Status", key: "emailStatus", width: 15 },
-    ];
-
-    // ✅ Add rows
-    users.forEach((u) => {
-      worksheet.addRow({
-        firstname: u.firstname,
-        lastname: u.lastname,
-        regNo: u.regNo,
-        college: u.college,
-        year: u.year,
-        email: u.email,
-        phone: u.phone,
-        createdAt: u.createdAt
-          ? new Date(u.createdAt).toISOString()
-          : "N/A",
-        emailStatus: u.emailStatus || "pending",
-      });
-    });
-
-    // ✅ Write workbook to buffer
-    const buffer = await workbook.xlsx.writeBuffer();
-
-    // ✅ Send as download
-    res.setHeader(
-      "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    );
-    res.setHeader(
-      "Content-Disposition",
-      "attachment; filename=users.xlsx"
-    );
-
-    res.send(buffer);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to export Excel" });
-  }
-});
 
 
 module.exports = router;
