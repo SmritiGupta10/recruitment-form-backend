@@ -3,28 +3,84 @@
 <head>
   <meta charset="UTF-8">
   <title>Finish Your MTTN Application</title>
-</head>
-<body style="margin:0; padding:0; font-family:'Segoe UI', Arial, sans-serif; background:#0b0b0b; color:#eaeaea;">
+  <style>
+    /* Light mode */
+    @media (prefers-color-scheme: light) {
+      body, table {
+        background-color: #f4f4f5 !important; /* zinc-100 */
+        color: #111 !important;
+      }
+      .card {
+        background: #e4e4e7 !important; /* zinc-200 */
+        color: #111 !important;
+      }
+      .btn {
+        background: #18181b !important; /* zinc-900 */
+        color: #fff !important;
+      }
+      .text-muted {
+        color: #444 !important;
+      }
+      .hero {
+        background: linear-gradient(135deg, #fafafa, #f4f4f5, #e4e4e7) !important;
+      }
+      .logo {
+        filter: brightness(0) invert(1) !important;
+      }
+    }
 
-  <table width="100%" cellspacing="0" cellpadding="0" style="background:#0b0b0b; padding:0;">
+    /* Dark mode */
+    @media (prefers-color-scheme: dark) {
+      body, table {
+        background-color: #0b0b0b !important;
+        color: #eaeaea !important;
+      }
+      .card {
+        background: linear-gradient(135deg,#121212,#1a1a1a) !important;
+        color: #fff !important;
+      }
+      .btn {
+        background: #ffffff !important;
+        color: #000000 !important;
+      }
+      .text-muted {
+        color: #888 !important;
+      }
+      .hero {
+        background: linear-gradient(135deg,#121212,#1a1a1a) !important;
+        color: #fff !important;
+      }
+      h1, h2, h3, h4, h5, h6, p, span, td, a, b, strong {
+        color: #ffffff !important;
+      }
+      .text-muted {
+        color: #bbbbbb !important; /* softer white/gray for muted text */
+      }
+    }
+    }
+  </style>
+</head>
+<body style="margin:0; padding:0; font-family:'Segoe UI', Arial, sans-serif; background:#f4f4f5; color:#111;">
+
+  <table width="100%" cellspacing="0" cellpadding="0" style="background:#f4f4f5; padding:0;">
     
     <!-- Header / Hero -->
     <tr>
       <td align="center" style="padding:0;">
-        <table width="100%" cellspacing="0" cellpadding="0" 
-          style="background:linear-gradient(135deg,#000000,#161616,#2a2a2a); 
+        <table class="hero" width="100%" cellspacing="0" cellpadding="0" 
+          style="background:linear-gradient(135deg,#fafafa,#f4f4f5,#e4e4e7); 
                  text-align:center; 
                  padding:70px 20px; 
                  border-radius:0 0 28px 28px;">
           <tr>
             <td>
-              <img src="https://www.manipalthetalk.org/images/mttn.png" 
+              <img src="https://ik.imagekit.io/hepishvdz/WhatsApp%20Image%202025-08-23%20at%2022.49.01.jpeg?updatedAt=1755971809287" 
                    alt="MTTN Logo" 
-                   style="width:90px; margin-bottom:20px; filter:brightness(0) invert(1);">
-              <h1 style="margin:0; font-size:28px; font-weight:700; color:#ffffff;">
-                You’re Almost There, {{receiverName}} ✨
+                   style="width:110px; margin-bottom:20px; ;">
+              <h1 style="margin:0; font-size:28px; font-weight:700; color:#111;">
+                You’re Almost There,  {{receiverName}} ✨
               </h1>
-              <p style="margin:16px auto 0; font-size:16px; line-height:1.6; max-width:540px; color:#d9d9d9;">
+              <p style="margin:16px auto 0; font-size:16px; line-height:1.6; max-width:540px; color:#333;">
                 We noticed you’ve started your <b>MTTN application</b> but haven’t completed it yet.  
                 Don’t miss your chance to join one of Manipal’s most dynamic student communities.
               </p>
@@ -39,10 +95,10 @@
       <td align="center" style="padding:50px 20px;">
         <table width="600" cellspacing="0" cellpadding="0" style="max-width:90%; text-align:center;">
           <tr>
-            <td style="background:linear-gradient(135deg,#121212,#1a1a1a); border-radius:18px; padding:32px; box-shadow:0 3px 10px rgba(0,0,0,0.5);">
-              <h2 style="margin:0 0 15px; font-size:20px; color:#ffffff;">⏰ Deadline Alert</h2>
-              <p style="margin:0; font-size:15px; color:#eaeaea; line-height:1.6;">
-                Applications close on <b style="color:#fff;">24rd August, 2025</b>.  
+            <td class="card" style="background:#e4e4e7; border-radius:18px; padding:32px; box-shadow:0 3px 10px rgba(0,0,0,0.1);">
+              <h2 style="margin:0 0 15px; font-size:20px; color:#111;">⏰ Deadline Alert: Only 24h Left to Submit Your Form!</h2>
+              <p style="margin:0; font-size:15px; color:#333; line-height:1.6;">
+                Applications close on <b style="color:#000;">24rd August, 2025</b>.  
                 Complete your form today and make sure your talent gets noticed.  
                 <br><br>
                 At MTTN, your stories, ideas, and creativity reach <b>thousands across Manipal</b>.  
@@ -57,8 +113,8 @@
     <!-- CTA Button -->
     <tr>
       <td align="center" style="padding:10px 20px;">
-        <a href="https://www.manipalthetalk.org" 
-           style="background:#ffffff; color:#000000; font-size:16px; font-weight:600; text-decoration:none; padding:15px 32px; border-radius:12px; display:inline-block; margin-top:10px; transition:all 0.3s ease;">
+        <a class="btn" href="https://www.manipalthetalk.org" 
+           style="background:#18181b; color:#ffffff; font-size:16px; font-weight:600; text-decoration:none; padding:15px 32px; border-radius:12px; display:inline-block; margin-top:10px;">
           Complete My Application
         </a>
       </td>
@@ -70,7 +126,7 @@
         <table width="600" cellspacing="0" cellpadding="0" style="max-width:90%; text-align:center;">
           <tr>
             <td style="padding:10px;">
-              <p style="margin:0 auto; font-size:15px; line-height:1.6; max-width:520px; color:#dcdcdc;">
+              <p class="text-muted" style="margin:0 auto; font-size:15px; line-height:1.6; max-width:520px; color:#444;">
                 Last year, <b>MTTN content reached over 2 million people</b> and gave students the platform to express, create, and inspire.  
                 <br><br>
                 Imagine the impact <b>you</b> can make as part of this family. 💡
@@ -83,7 +139,7 @@
 
     <!-- Footer -->
     <tr>
-      <td align="center" style="padding:30px 20px 60px; font-size:12px; color:#888;">
+      <td align="center" class="text-muted" style="padding:30px 20px 60px; font-size:12px; color:#444;">
         © 2025 MTTN · Manipal <br>
         “Sharing Stories, Creating Experiences”  
       </td>

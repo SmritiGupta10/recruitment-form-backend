@@ -81,21 +81,31 @@ async function syncUsersMongoToSheet() {
   const sheets = await getSheetsClient();
   const existingRows = await readSheet(SHEET_ID, USERS_RANGE);
 
-  // Map existing Reg No to row index and current values
+  // Map existing Reg No -> row index + values
   const existingMap = {};
   existingRows.slice(1).forEach((row, idx) => {
     const regNo = row[3];
-    if (regNo) existingMap[regNo] = { rowIndex: idx + 2, values: row };
+    if (regNo && !existingMap[regNo]) {
+      existingMap[regNo] = { rowIndex: idx + 2, values: row }; // rowIndex +2 (header offset + 1-based index)
+    }
   });
 
   const lastSync = await getLastSyncTime("mongoToSheet_users");
   const allRegNos = Object.keys(existingMap);
 
-  // Fetch users updated since last sync or missing
+  // Fetch users from Mongo
   const updatedUsers = await User.find({ lastModified: { $gt: lastSync } }).lean();
   const missingUsers = await User.find({ regNo: { $nin: allRegNos } }).lean();
-  const usersToSync = [...updatedUsers, ...missingUsers];
 
+  // Merge + deduplicate by regNo (Mongo may return duplicates if queries overlap)
+  const usersMap = {};
+  [...updatedUsers, ...missingUsers].forEach(u => {
+    if (u.regNo && !usersMap[u.regNo]) {
+      usersMap[u.regNo] = u;
+    }
+  });
+
+  const usersToSync = Object.values(usersMap);
   if (!usersToSync.length) return;
 
   const requests = [];
@@ -115,15 +125,20 @@ async function syncUsersMongoToSheet() {
 
     if (existingMap[u.regNo]) {
       const existingValues = existingMap[u.regNo].values;
-      // Compare existing row with new row, only update if there are changes
       const changed = rowData.some((val, idx) => val !== (existingValues[idx] || ''));
       if (changed) {
         requests.push({
           updateCells: {
-            rows: [{ values: rowData.map(v => ({ userEnteredValue: { stringValue: v } })) }],
+            rows: [
+              {
+                values: rowData.map(v => ({
+                  userEnteredValue: { stringValue: v }
+                }))
+              }
+            ],
             fields: '*',
             start: {
-              sheetId: 0,
+              sheetId: 0, // 🔹 ensure correct sheet ID
               rowIndex: existingMap[u.regNo].rowIndex - 1,
               columnIndex: 0
             }
@@ -136,17 +151,21 @@ async function syncUsersMongoToSheet() {
   }
 
   const BATCH_SIZE = 50;
+  const DELAY_MS = 500;
 
-  // Batch update existing rows
+  // 🔹 Batch update existing rows safely
   for (let i = 0; i < requests.length; i += BATCH_SIZE) {
     const batch = requests.slice(i, i + BATCH_SIZE);
     await retryRequest(() =>
-      sheets.spreadsheets.batchUpdate({ spreadsheetId: SHEET_ID, resource: { requests: batch } })
+      sheets.spreadsheets.batchUpdate({
+        spreadsheetId: SHEET_ID,
+        resource: { requests: batch }
+      })
     );
-    await delay(500);
+    await delay(DELAY_MS);
   }
 
-  // Batch append new rows
+  // 🔹 Batch append new rows safely
   for (let i = 0; i < newRows.length; i += BATCH_SIZE) {
     const batch = newRows.slice(i, i + BATCH_SIZE);
     await retryRequest(() =>
@@ -157,12 +176,13 @@ async function syncUsersMongoToSheet() {
         resource: { values: batch }
       })
     );
-    await delay(500);
+    await delay(DELAY_MS);
   }
 
   await updateLastSyncTime("mongoToSheet_users", new Date());
-  console.log(`Synced ${usersToSync.length} users to Google Sheet (updated + added)`);
+  console.log(`✅ Synced ${usersToSync.length} unique users to Google Sheet (updated + added)`);
 }
+
 
 
 async function syncUsersSheetToMongo() {
