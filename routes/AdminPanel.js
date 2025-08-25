@@ -18,7 +18,9 @@ router.get("/users", async (req, res) => {
 // ✅ Fetch all applications (optionally attach user if exists)
 router.get("/applications", async (req, res) => {
   try {
-    res.setHeader("Content-Type", "application/x-ndjson");
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
 
     const users = await User.find();
     const userMap = new Map(users.map(u => [u.regNo, u]));
@@ -28,12 +30,16 @@ router.get("/applications", async (req, res) => {
     for await (const app of cursor) {
       const user = userMap.get(app.registrationNumber) || null;
       const appWithUser = { ...app.toObject(), userDetails: user };
-      res.write(JSON.stringify(appWithUser) + "\n");
+
+      res.write(`data: ${JSON.stringify(appWithUser)}\n\n`);
     }
 
+    res.write("event: end\ndata: done\n\n");
     res.end();
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error(err);
+    res.write(`event: error\ndata: ${JSON.stringify({ message: err.message })}\n\n`);
+    res.end();
   }
 });
 
