@@ -16,48 +16,23 @@ router.get("/users", async (req, res) => {
 });
 
 // ✅ Fetch all applications (optionally attach user if exists)
-// ✅ Fetch applications with pagination + user details
 router.get("/applications", async (req, res) => {
   try {
-    // Page & limit from query (defaults: page=1, limit=50)
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 50;
-    const skip = (page - 1) * limit;
+    // Fetch all applications
+    const apps = await Application.find().sort({ lastUpdated: -1 });
 
-    // Fetch applications for this page
-    const apps = await Application.find()
-      .sort({ lastUpdated: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean();
-
-    // Fetch all users once (lean = plain objects)
-    const users = await User.find().lean();
-
-    // Create map for O(1) lookups
-    const userMap = new Map(users.map(u => [u.regNo, u]));
-
-    // Attach userDetails
-    const appsWithUser = apps.map(app => ({
-      ...app,
-      userDetails: userMap.get(app.registrationNumber) || null,
-    }));
-
-    // Total count (for frontend pagination UI)
-    const total = await Application.countDocuments();
-
-    res.json({
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
-      data: appsWithUser,
+    // Optionally attach user details if registrationNumber matches a user
+    const users = await User.find(); // fetch all users once
+    const appsWithUser = apps.map(app => {
+      const user = users.find(u => u.regNo === app.registrationNumber) || null;
+      return { ...app.toObject(), userDetails: user };
     });
+
+    res.json(appsWithUser);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
-
 // POST /send-unfilled-emails
 router.post("/send-unfilled-emails", async (req, res) => {
   const { users } = req.body;
