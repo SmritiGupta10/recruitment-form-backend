@@ -18,21 +18,25 @@ router.get("/users", async (req, res) => {
 // ✅ Fetch all applications (optionally attach user if exists)
 router.get("/applications", async (req, res) => {
   try {
-    // Fetch all applications
-    const apps = await Application.find().sort({ lastUpdated: -1 });
+    res.setHeader("Content-Type", "application/x-ndjson");
 
-    // Optionally attach user details if registrationNumber matches a user
-    const users = await User.find(); // fetch all users once
-    const appsWithUser = apps.map(app => {
-      const user = users.find(u => u.regNo === app.registrationNumber) || null;
-      return { ...app.toObject(), userDetails: user };
-    });
+    const users = await User.find();
+    const userMap = new Map(users.map(u => [u.regNo, u]));
 
-    res.json(appsWithUser);
+    const cursor = Application.find().sort({ lastUpdated: -1 }).cursor();
+
+    for await (const app of cursor) {
+      const user = userMap.get(app.registrationNumber) || null;
+      const appWithUser = { ...app.toObject(), userDetails: user };
+      res.write(JSON.stringify(appWithUser) + "\n");
+    }
+
+    res.end();
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
+
 // POST /send-unfilled-emails
 router.post("/send-unfilled-emails", async (req, res) => {
   const { users } = req.body;
