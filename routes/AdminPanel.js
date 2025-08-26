@@ -2,18 +2,46 @@ const express = require("express");
 const User = require("../models/userModel");
 const Application = require("../models/applicationModel");
 const { sendMail } = require("../utils/sendMail");
-
 const router = express.Router();
+const { Redis } =require("@upstash/redis");
+const { setCache, getCache } = require("../utils/cache");
 
-// ✅ Fetch all users
+
+
+
+
+
+// ----------------- USERS SSE Route -----------------
+// ✅ SSE for users
 router.get("/users", async (req, res) => {
   try {
+    // Set headers for SSE
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+
+    // Fetch users
     const users = await User.find().sort({ createdAt: -1 });
-    res.json(users);
+
+    // Send initial users as SSE
+    res.write(`data: ${JSON.stringify(users)}\n\n`);
+
+    // Optional: Keep connection alive for future updates
+    const keepAlive = setInterval(() => {
+      res.write(`:\n\n`); // comment ping to keep connection alive
+    }, 25000); // every 25 seconds
+
+    // Cleanup on client disconnect
+    req.on("close", () => {
+      clearInterval(keepAlive);
+      res.end();
+    });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error(err);
+    res.end();
   }
 });
+
 
 // ✅ Fetch all applications (optionally attach user if exists)
 router.get("/applications", async (req, res) => {
@@ -42,6 +70,9 @@ router.get("/applications", async (req, res) => {
     res.end();
   }
 });
+
+
+
 
 // POST /send-unfilled-emails
 router.post("/send-unfilled-emails", async (req, res) => {
