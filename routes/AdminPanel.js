@@ -43,33 +43,54 @@ router.get("/users", async (req, res) => {
 });
 
 
-// ✅ Fetch all applications (optionally attach user if exists)
+// Upstash Redis client
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+});
+
 router.get("/applications", async (req, res) => {
   try {
-    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Content-Type", "application/x-ndjson");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
+    res.flushHeaders?.();
 
-    const users = await User.find();
-    const userMap = new Map(users.map(u => [u.regNo, u]));
+    let apps = await redis.get("applications_cache");
 
-    const cursor = Application.find().sort({ lastUpdated: -1 }).cursor();
+    if (!apps) {
+      console.log("Fetching applications from MongoDB...");
+      // Fetch fresh from Mongo
+      const cursor = Application.find().sort({ lastUpdated: -1 }).cursor();
+      apps = [];
 
-    for await (const app of cursor) {
-      const user = userMap.get(app.registrationNumber) || null;
-      const appWithUser = { ...app.toObject(), userDetails: user };
+      for await (const app of cursor) {
+        apps.push(app.toObject());
+      }
 
-      res.write(`data: ${JSON.stringify(appWithUser)}\n\n`);
+      // ✅ Always store as string
+      await redis.set("applications_cache", JSON.stringify(apps), { ex: 600 });
+      console.log(`✅ Cached ${apps.length} applications in Redis`);
+    } else {
+      console.log("⚡ Serving applications from Redis cache");
+      // ✅ Parse only if string
+      if (typeof apps === "string") {
+        apps = JSON.parse(apps);
+      }
     }
 
-    res.write("event: end\ndata: done\n\n");
+    // 🚀 Stream NDJSON
+    for (const app of apps) {
+      res.write(JSON.stringify(app) + "\n");
+    }
+
     res.end();
   } catch (err) {
-    console.error(err);
-    res.write(`event: error\ndata: ${JSON.stringify({ message: err.message })}\n\n`);
-    res.end();
+    console.error("❌ Applications stream error:", err);
+    res.status(500).end();
   }
 });
+
 
 
 
