@@ -78,15 +78,14 @@ router.get("/applications", async (req, res) => {
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
 
-    let apps;
-
+    // ------------------- 1️⃣ Serve gzip clients -------------------
     if (supportsGzip) {
-      // Try pre-gzipped cache (stored as Base64)
-      const gzippedBase64 = await redis.get("applications_cache_gzip");
-      if (gzippedBase64) {
-        console.log("⚡ Serving pre-gzipped applications from Redis");
+      const gzippedBufferBase64 = await redis.get("applications_cache_gzip_raw"); 
+      // stored as Base64 because Upstash only supports strings
+      if (gzippedBufferBase64) {
+        console.log("⚡ Serving pre-gzipped applications from Redis (raw binary via Base64)");
 
-        const gzippedBuffer = Buffer.from(gzippedBase64, "base64");
+        const gzippedBuffer = Buffer.from(gzippedBufferBase64, "base64");
 
         res.setHeader("Content-Type", "application/x-ndjson");
         res.setHeader("Content-Encoding", "gzip");
@@ -94,56 +93,49 @@ router.get("/applications", async (req, res) => {
       }
     }
 
-    // Try raw JSON cache
-    const rawCache = await redis.get("applications_cache_raw");
-
-    if (!rawCache) {
-      // Fetch from Mongo
-      const cursor = Application.find().sort({ lastUpdated: -1 }).cursor();
-      apps = [];
-
-      for await (const app of cursor) {
-        apps.push(app.toObject());
-      }
-
-      // Store raw JSON
-      await redis.set("applications_cache_raw", JSON.stringify(apps), { ex: 345600 });
-
-      // Create NDJSON
-      const ndjsonData = apps.map(a => JSON.stringify(a)).join("\n") + "\n";
-
-      // Store pre-gzipped version as Base64
-      const gzipped = zlib.gzipSync(ndjsonData);
-      await redis.set("applications_cache_gzip", gzipped.toString("base64"), { ex: 345600 });
-
-      console.log(`✅ Cached ${apps.length} applications in both raw + gzip`);
-    } else {
-      apps = JSON.parse(rawCache);
-      console.log("⚡ Serving raw applications from Redis cache");
+    // ------------------- 2️⃣ Serve raw clients -------------------
+    const ndjsonCache = await redis.get("applications_cache_ndjson");
+    if (ndjsonCache && !supportsGzip) {
+      console.log("⚡ Serving cached NDJSON for raw client");
+      res.setHeader("Content-Type", "application/x-ndjson");
+      return res.end(ndjsonCache);
     }
 
-    // Serve response
-    res.setHeader("Content-Type", "application/x-ndjson");
+    // ------------------- 3️⃣ Cache miss → fetch from Mongo -------------------
+    console.log("📥 Fetching applications from MongoDB...");
+    const cursor = Application.find().sort({ lastUpdated: -1 }).cursor();
+    const apps = [];
+    for await (const app of cursor) {
+      apps.push(app.toObject());
+    }
 
+    // Convert to NDJSON string
+    const ndjsonData = apps.map(a => JSON.stringify(a)).join("\n") + "\n";
+
+    // Gzip NDJSON buffer
+    const gzipped = zlib.gzipSync(ndjsonData);
+
+    // ------------------- 4️⃣ Cache both -------------------
+    await redis.set("applications_cache_ndjson", ndjsonData, { ex: 345600 }); // raw NDJSON
+    await redis.set("applications_cache_gzip_raw", gzipped.toString("base64"), { ex: 345600 }); // gzip as Base64
+
+    console.log(`✅ Cached ${apps.length} applications (NDJSON + gzipped)`);
+
+    // ------------------- 5️⃣ Serve response -------------------
     if (supportsGzip) {
+      res.setHeader("Content-Type", "application/x-ndjson");
       res.setHeader("Content-Encoding", "gzip");
-      const gzip = zlib.createGzip();
-      gzip.pipe(res);
-      for (const app of apps) {
-        gzip.write(JSON.stringify(app) + "\n");
-      }
-      gzip.end();
+      res.end(gzipped);
     } else {
-      for (const app of apps) {
-        res.write(JSON.stringify(app) + "\n");
-      }
-      res.end();
+      res.setHeader("Content-Type", "application/x-ndjson");
+      res.end(ndjsonData);
     }
   } catch (err) {
     console.error("❌ Applications stream error:", err);
     res.status(500).end();
   }
 });
+
 
 
 // POST /send-unfilled-emails
