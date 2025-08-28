@@ -4,7 +4,9 @@ const Application = require("../models/applicationModel");
 const { sendMail } = require("../utils/sendMail");
 const router = express.Router();
 const { Redis } =require("@upstash/redis");
-const { setCache, getCache } = require("../utils/cache");
+// const { setCache, getCache } = require("../utils/cache");
+const zlib = require("zlib");
+
 
 
 // Upstash Redis client
@@ -70,17 +72,33 @@ router.get("/users/stream", async (req, res) => {
 
 router.get("/applications", async (req, res) => {
   try {
-    res.setHeader("Content-Type", "application/x-ndjson");
+    const acceptEncoding = req.headers["accept-encoding"] || "";
+    const supportsGzip = acceptEncoding.includes("gzip");
+
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
-    res.flushHeaders?.();
 
-    let apps = await redis.get("applications_cache");
+    let apps;
 
-    if (!apps) {
-      // console.time("⏱️ Mongo fetch time");
-      // console.log("📥 Fetching applications from MongoDB...");
+    if (supportsGzip) {
+      // Try pre-gzipped cache (stored as Base64)
+      const gzippedBase64 = await redis.get("applications_cache_gzip");
+      if (gzippedBase64) {
+        console.log("⚡ Serving pre-gzipped applications from Redis");
 
+        const gzippedBuffer = Buffer.from(gzippedBase64, "base64");
+
+        res.setHeader("Content-Type", "application/x-ndjson");
+        res.setHeader("Content-Encoding", "gzip");
+        return res.end(gzippedBuffer);
+      }
+    }
+
+    // Try raw JSON cache
+    const rawCache = await redis.get("applications_cache_raw");
+
+    if (!rawCache) {
+      // Fetch from Mongo
       const cursor = Application.find().sort({ lastUpdated: -1 }).cursor();
       apps = [];
 
@@ -88,39 +106,44 @@ router.get("/applications", async (req, res) => {
         apps.push(app.toObject());
       }
 
-      // console.timeEnd("⏱️ Mongo fetch time"); // e.g. 4.3s
+      // Store raw JSON
+      await redis.set("applications_cache_raw", JSON.stringify(apps), { ex: 345600 });
 
-      // console.time("⏱️ Redis cache set time");
-      await redis.set("applications_cache", JSON.stringify(apps), { ex: 345600 });
-      // console.timeEnd("⏱️ Redis cache set time");
+      // Create NDJSON
+      const ndjsonData = apps.map(a => JSON.stringify(a)).join("\n") + "\n";
 
-      console.log(`✅ Cached ${apps.length} applications in Redis`);
+      // Store pre-gzipped version as Base64
+      const gzipped = zlib.gzipSync(ndjsonData);
+      await redis.set("applications_cache_gzip", gzipped.toString("base64"), { ex: 345600 });
+
+      console.log(`✅ Cached ${apps.length} applications in both raw + gzip`);
     } else {
-      // console.time("⏱️ Redis fetch time");
-      console.log("⚡ Serving applications from Redis cache");
+      apps = JSON.parse(rawCache);
+      console.log("⚡ Serving raw applications from Redis cache");
+    }
 
-      if (typeof apps === "string") {
-        apps = JSON.parse(apps);
+    // Serve response
+    res.setHeader("Content-Type", "application/x-ndjson");
+
+    if (supportsGzip) {
+      res.setHeader("Content-Encoding", "gzip");
+      const gzip = zlib.createGzip();
+      gzip.pipe(res);
+      for (const app of apps) {
+        gzip.write(JSON.stringify(app) + "\n");
       }
-      // console.timeEnd("⏱️ Redis fetch time"); // e.g. 50ms
+      gzip.end();
+    } else {
+      for (const app of apps) {
+        res.write(JSON.stringify(app) + "\n");
+      }
+      res.end();
     }
-
-    // console.time("⏱️ NDJSON stream time");
-    for (const app of apps) {
-      res.write(JSON.stringify(app) + "\n");
-    }
-    // console.timeEnd("⏱️ NDJSON stream time");
-
-    res.end();
   } catch (err) {
     console.error("❌ Applications stream error:", err);
     res.status(500).end();
   }
 });
-
-
-
-
 
 
 // POST /send-unfilled-emails
