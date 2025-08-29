@@ -60,11 +60,8 @@ router.get("/applications", async (req, res) => {
       if (typeof cache !== "string") {
         cache = JSON.stringify(cache);
       }
-
-      res.setHeader("Content-Type", "application/json");
-      res.setHeader("Cache-Control", "no-cache");
-      res.setHeader("Connection", "keep-alive");
-      return res.end(cache);
+      // ✅ Just send JSON properly
+      return res.type("json").send(cache);
     }
 
     // 2️⃣ Cache miss → fetch from Mongo
@@ -76,17 +73,15 @@ router.get("/applications", async (req, res) => {
     // 3️⃣ Cache result (store as string)
     await redis.set("applications_cache_json", jsonData, { ex: 60 * 60 * 24 * 4 }); // 4 days
 
-    // 4️⃣ Serve response
-    res.setHeader("Content-Type", "application/json");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-    res.end(jsonData);
+    // 4️⃣ Serve response cleanly
+    res.type("json").send(jsonData);
 
   } catch (err) {
     console.error("❌ Applications fetch error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
 
 
 
