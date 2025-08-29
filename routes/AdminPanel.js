@@ -54,27 +54,31 @@ router.get("/applications", async (req, res) => {
     let cache = await redis.get("applications_cache_json");
     if (cache) {
       console.log("⚡ Serving cached applications from Redis");
-      return res.json(JSON.parse(cache)); // ✅ parse back into object
+
+      if (typeof cache !== "string") {
+        cache = JSON.stringify(cache);
+      }
+      // ✅ Just send JSON properly
+      return res.type("json").send(cache);
     }
 
     // 2️⃣ Cache miss → fetch from Mongo
     console.log("📥 Fetching applications from MongoDB...");
     const apps = await Application.find().sort({ lastUpdated: -1 }).lean();
 
+    const jsonData = JSON.stringify(apps);
+
     // 3️⃣ Cache result (store as string)
-    await redis.set("applications_cache_json", JSON.stringify(apps), {
-      ex: 60 * 60 * 24 * 4, // 4 days
-    });
+    await redis.set("applications_cache_json", jsonData, { ex: 60 * 60 * 24 * 4 }); // 4 days
 
     // 4️⃣ Serve response cleanly
-    res.json(apps); // ✅ lets Express handle headers/closing
+    res.type("json").send(jsonData);
 
   } catch (err) {
     console.error("❌ Applications fetch error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
-
 
 
 
