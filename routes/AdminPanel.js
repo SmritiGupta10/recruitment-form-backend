@@ -19,20 +19,18 @@ router.get("/users", async (req, res) => {
     if (cache) {
       console.log("⚡ Serving cached JSON users from Redis");
 
-      // Ensure cache is a string
       if (typeof cache !== "string") {
         cache = JSON.stringify(cache);
       }
 
-      res.setHeader("Content-Type", "application/json");
-      return res.end(cache); // ✅ safe
+      // ✅ Let Express handle JSON headers
+      return res.type("json").send(cache);
     }
 
     // 2️⃣ Cache miss → fetch from Mongo
     console.log("📥 Fetching users from MongoDB...");
     const users = await User.find().sort({ createdAt: -1 }).lean();
 
-    // Convert to JSON string
     const jsonData = JSON.stringify(users);
 
     // 3️⃣ Cache result (always store as string)
@@ -41,14 +39,14 @@ router.get("/users", async (req, res) => {
     console.log(`✅ Cached ${users.length} users (JSON)`);
 
     // 4️⃣ Serve response
-    res.setHeader("Content-Type", "application/json");
-    res.end(jsonData);
+    res.type("json").send(jsonData);
 
   } catch (err) {
     console.error("❌ JSON /users error:", err);
     res.status(500).json({ error: "Failed to fetch users" });
   }
 });
+
 
 router.get("/applications", async (req, res) => {
   try {
