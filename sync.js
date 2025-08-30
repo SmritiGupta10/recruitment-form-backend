@@ -24,7 +24,7 @@ async function getSheetsClient() {
 }
 
 // Sheet details
-const SHEET_ID = '1SKHDyhZ5xP_RRjmL7OIk71QNoOPQRoy8OeXD6ijhg1Y';
+const SHEET_ID = '102xoUE8Dt8vpvke_NmTdY_ZFaEGiBpnofILAwuTAa44';
 const USERS_RANGE = 'Users!A1:J';
 const APPLICATIONS_RANGE = 'Applications!A1:F';
 
