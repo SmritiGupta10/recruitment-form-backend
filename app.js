@@ -15,7 +15,7 @@ const app = express();
 
 app.use(
   cors({
-    origin: ["http://localhost:3000", "https://www.manipalthetalk.org"."https://mttn-3ewsmrj3b-mttndevelopersgmailcoms-projects.vercel.app"],
+    origin: ["http://localhost:3000", "https://www.manipalthetalk.org","https://mttn-3ewsmrj3b-mttndevelopersgmailcoms-projects.vercel.app"],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "x-requested-with"],
     credentials: true,
