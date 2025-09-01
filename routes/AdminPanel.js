@@ -15,7 +15,7 @@ const redis = new Redis({
 router.get("/users", async (req, res) => {
   try {
     // 1️⃣ Try cache first
-    let cache = await redis.get("users_cache_json");
+    let cache = await redis.get("users_hs_cache_json");
     if (cache) {
       console.log("⚡ Serving cached JSON users from Redis");
 
@@ -34,7 +34,7 @@ router.get("/users", async (req, res) => {
     const jsonData = JSON.stringify(users);
 
     // 3️⃣ Cache result (always store as string)
-    await redis.set("users_cache_json", jsonData, { ex: 60 * 60 * 24 * 4 }); // 4 days
+    await redis.set("users_hs_cache_json", jsonData, { ex: 60 * 60 * 24 * 4 }); // 4 days
 
     console.log(`✅ Cached ${users.length} users (JSON)`);
 
@@ -51,7 +51,7 @@ router.get("/users", async (req, res) => {
 router.get("/applications", async (req, res) => {
   try {
     // 1️⃣ Try cache first
-    let cache = await redis.get("applications_cache_json");
+    let cache = await redis.get("applications_hs_cache_json");
     if (cache) {
       console.log("⚡ Serving cached applications from Redis");
 
@@ -69,7 +69,7 @@ router.get("/applications", async (req, res) => {
     const jsonData = JSON.stringify(apps);
 
     // 3️⃣ Cache result (store as string)
-    await redis.set("applications_cache_json", jsonData, { ex: 60 * 60 * 24 * 4 }); // 4 days
+    await redis.set("applications_hs_cache_json", jsonData, { ex: 60 * 60 * 24 * 4 }); // 4 days
 
     // 4️⃣ Serve response cleanly
     res.type("json").send(jsonData);
