@@ -36,7 +36,7 @@ app.use("/applicants", adminPanelRoutes);
 app.use("/applicants", finalsheetRouter);
 
 // Start sync cron
-// startSyncCron();
+startSyncCron();
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
