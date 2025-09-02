@@ -15,7 +15,7 @@ const redis = new Redis({
 router.get("/users", async (req, res) => {
   try {
     // 1️⃣ Try cache first
-    let cache = await redis.get("users_hs_cache_json");
+    let cache = await redis.get("users_h_cache_json");
     if (cache) {
       console.log("⚡ Serving cached JSON users from Redis");
 
@@ -51,7 +51,7 @@ router.get("/users", async (req, res) => {
 router.get("/applications", async (req, res) => {
   try {
     // 1️⃣ Try cache first
-    let cache = await redis.get("applications_hs_cache_json");
+    let cache = await redis.get("applications_h_cache_json");
     if (cache) {
       console.log("⚡ Serving cached applications from Redis");
 
